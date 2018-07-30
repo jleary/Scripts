@@ -2,17 +2,19 @@
 use warnings;
 use strict;
 use File::Glob;
-
-# Written by: (John Leary)[git@jleary.cc]
-# Version:    28 Jul, 2018
-# Dependencies: pandoc, perl, and rsync
+use Config::Simple;
+# Written by:   (John Leary)[git@jleary.cc]
+# Date Created: 28 Jul 2018
+# Version:      29 Jul 2018
+# Dependencies: pandoc, perl, Config::Simple, and rsync
 
 ## Config
-my $basedir = '/home/jleary/Documents/Site';
+my $basedir = "$ENV{'HOME'}/Documents/Site";
 my $srcdir  = "$basedir/src";
 my $outdir  = "$basedir/out";
 my $incdir  = "$basedir/inc";
-my $srvurl  = "/tmp/test";
+my $config  = new Config::Simple("$basedir/remote.cfg");
+my $srvurl  = $config->param("remote");
 my %tabmap  = (
                 'index.md'    => 'home',
                 'posts/'      => 'posts',
@@ -22,8 +24,9 @@ my %tabmap  = (
 ## Processing
 my %subs=(
     '-g'=>[\&gen_site,$srcdir],
-    '-p'=>[\&push,],
-    '-?'=>[\&help,],
+    '-p'=>[\&push,undef],
+    '-n'=>[\&new, undef],
+    '-?'=>[\&help,undef],
 );
 
 my $arg = (defined $ARGV[0] && $subs{$ARGV[0]}) ? $ARGV[0]:'-?'; 
@@ -31,8 +34,6 @@ $subs{$arg}->[0]($subs{$arg}->[1]);
 
 sub gen_site{
     return if $_[0] =~ /\.git$/;
-    print "Change Dir: $_[0]\n";
-    chdir $_[0];
     (my $newdir = $_[0]) =~ s/$srcdir/$outdir/g;
     print "Make Dir: $newdir\n";
     mkdir $newdir;
@@ -51,16 +52,34 @@ sub gen_site{
 }
 
 sub push{
-    (chdir $srcdir and print "Commit & Publish y/N: ") or die "Could not chdir into $srcdir\n";
+    chdir $srcdir  or die "Could not chdir into $srcdir\n";
+    print "Commit & Publish y/N: ";
     print "Exiting...\n" and exit if(<STDIN>!~ /^[Y|y]/);
-    print "Commiting Source to Git\n",;#`git commit -a -m "Automatic site update";git push`;
-    print "Pushing Site\n",`rsync -a $outdir/ $srvurl `;
+    print "Commiting Source to Git\n",;
+    #`git commit -a -m "Automatic site update";git push`;
+    print "Pushing Site\n";
+    print `rsync -a $outdir/ $srvurl`;
+}
+
+sub new{
+    stat $srcdir or die "Could not stat $srcdir\n";
+    stat $outdir or die "Could not stat $outdir\n";
+    my $name = '';
+    while($name eq ''){
+        print "What would you like to name the post (CTRL-C To Exit): ";
+        $name = <STDIN>;
+        chomp($name);
+    }
+    open(NEW,"+>","$srcdir/posts/$name.md") or die "Could not create post: $name.md\n";
+    close NEW;
+    mkdir "$outdir/media/$name" or die "Could not creat post: $srcdir/media/$name";
 }
 
 sub help{
      print <<HELP;
     -g: generates site
     -p: pushes site
+    -n: new post
     -?: shows this dialog
 HELP
 }
