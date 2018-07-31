@@ -20,6 +20,7 @@ my %tabmap  = (
                 'posts/'      => 'posts',
                 'resume/'     => 'resume',
             );
+my $year    = (localtime)[5] + 1900;
 
 ## Processing
 my %subs=(
@@ -50,8 +51,9 @@ sub gen_site{
         $tab  = $tabmap{$1} if defined $1;
         $file =~ s/\.md$/.html/g;
         if($_ =~ /\.(md|html)$/){
-            print "Processing $_ -> $file\n";
-            print `pandoc -s --template=$incdir/template.html $args -V tab=$tab -i $_ -o $file`;
+            print "Processing: $_ -> $file\n";
+            #Possible log hash of file skip here unless md file or template changes
+            print `pandoc -s --template=$incdir/template.html $args -V year=$year -V tab=$tab -i $_ -o $file`;
         }
     }
 }
@@ -74,6 +76,7 @@ sub new{
         print "What would you like to name the post (CTRL-C To Exit): ";
         $name = <STDIN>;
         chomp($name);
+        $name = '' if $name eq 'index';
     }
     open(NEW,"+>","$srcdir/posts/$name.md") or die "Could not create post: $name.md\n";
     close NEW;
