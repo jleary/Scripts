@@ -5,7 +5,7 @@ use File::Glob;
 use Config::Simple;
 # Written by:   (John Leary)[git@jleary.cc]
 # Date Created: 28 Jul 2018
-# Version:      29 Jul 2018
+# Version:      30 Jul 2018
 # Dependencies: pandoc, perl, Config::Simple, and rsync
 
 ## Config
@@ -24,9 +24,9 @@ my %tabmap  = (
 ## Processing
 my %subs=(
     '-g'=>[\&gen_site,$srcdir],
-    '-p'=>[\&push,undef],
-    '-n'=>[\&new, undef],
-    '-?'=>[\&help,undef],
+    '-p'=>[\&push    ,undef  ],
+    '-n'=>[\&new     ,undef  ],
+    '-?'=>[\&help    ,undef  ],
 );
 
 my $arg = (defined $ARGV[0] && $subs{$ARGV[0]}) ? $ARGV[0]:'-?'; 
@@ -37,16 +37,21 @@ sub gen_site{
     (my $newdir = $_[0]) =~ s/$srcdir/$outdir/g;
     print "Make Dir: $newdir\n";
     mkdir $newdir;
+    my $args = '';
+    if(-e $_[0]."/.login"){
+        $args = '-V login=login';
+        print "Handling Login Directory: $_[0]\n";
+    }
     foreach(<"$_[0]*">){
         print "Recursing On Directory: $_\n" and &gen_site("$_/") and next if(-d $_);
         (my $file = $_) =~ s/$srcdir/$outdir/g;
         $_ =~ /^$srcdir\/(index\.md|posts\/|resume\/)/g;
         my $tab = 'none';
-        $tab = $tabmap{$1} if defined $1;
+        $tab  = $tabmap{$1} if defined $1;
         $file =~ s/\.md$/.html/g;
-        if($_ =~ /\.md$/){
+        if($_ =~ /\.(md|html)$/){
             print "Processing $_ -> $file\n";
-            print `pandoc -s --template=$incdir/template.html -V tab=$tab -i $_ -o $file`;
+            print `pandoc -s --template=$incdir/template.html $args -V tab=$tab -i $_ -o $file`;
         }
     }
 }
@@ -56,9 +61,9 @@ sub push{
     print "Commit & Publish y/N: ";
     print "Exiting...\n" and exit if(<STDIN>!~ /^[Y|y]/);
     print "Commiting Source to Git\n",;
-    #`git commit -a -m "Automatic site update";git push`;
+    #`git commit -a -m "Automatic site update"`;
     print "Pushing Site\n";
-    print `rsync -a $outdir/ $srvurl`;
+    print `rsync -avz --progress -e "ssh" $outdir/ $srvurl`;
 }
 
 sub new{
