@@ -5,33 +5,41 @@ use File::Glob;
 use Config::Simple;
 # Written by:   (John Leary)[git@jleary.cc]
 # Date Created: 28 Jul 2018
-# Version:      30 Jul 2018
+# Version:      03 Aug 2018
 # Dependencies: pandoc, perl, Config::Simple, and rsync
 
 ## Config
-my $basedir = "$ENV{'HOME'}/Documents/Site";
+### I'm probably going to regret this
+### but I added multi site support.
+my $site    = defined $ARGV[1]? '/'.$ARGV[1] :  '';
+my $config  = new Config::Simple("$ENV{'HOME'}/Site$site/site.cfg") or die "Could not open site.cfg";
+my $basedir = "$ENV{'HOME'}/Site";
 my $srcdir  = "$basedir/src";
 my $outdir  = "$basedir/out";
 my $incdir  = "$basedir/inc";
-my $config  = new Config::Simple("$basedir/remote.cfg");
 my $srvurl  = $config->param("remote");
+my $prefix  = $config->param("prefix");
 my %tabmap  = (
                 'index.md'    => 'home',
                 'posts/'      => 'posts',
-                'resume/'     => 'resume',
             );
 my $year    = (localtime)[5] + 1900;
+my $regex; #tab regex
+($regex .= "$_|") =~s/\//\\\//g foreach keys %tabmap;
+chop($regex);
 
-## Processing
 my %subs=(
     '-g'=>[\&gen_site,$srcdir],
     '-p'=>[\&push    ,undef  ],
     '-n'=>[\&new     ,undef  ],
+    '-v'=>[\&view    ,undef  ],
     '-?'=>[\&help    ,undef  ],
 );
 
 my $arg = (defined $ARGV[0] && $subs{$ARGV[0]}) ? $ARGV[0]:'-?'; 
 $subs{$arg}->[0]($subs{$arg}->[1]);
+
+## Functions
 
 sub gen_site{
     return if $_[0] =~ /\.git$/;
@@ -46,14 +54,15 @@ sub gen_site{
     foreach(<"$_[0]*">){
         print "Recursing On Directory: $_\n" and &gen_site("$_/") and next if(-d $_);
         (my $file = $_) =~ s/$srcdir/$outdir/g;
-        $_ =~ /^$srcdir\/(index\.md|posts\/|resume\/)/g;
+        $_ =~ /^$srcdir\/($regex).*/g;
         my $tab = 'none';
-        $tab  = $tabmap{$1} if defined $1;
+        $tab  =  $tabmap{$1} if defined $1;
+        #print $tab,"\n";
         $file =~ s/\.md$/.html/g;
         if($_ =~ /\.(md|html)$/){
             print "Processing: $_ -> $file\n";
             #Possible log hash of file skip here unless md file or template changes
-            print `pandoc -s --template=$incdir/template.html $args -V year=$year -V tab=$tab -i $_ -o $file`;
+            print `pandoc -s --template=$incdir/template.html $args -T $prefix -V year=$year -V tab=$tab -i $_ -o $file`;
         }
     }
 }
@@ -62,8 +71,10 @@ sub push{
     chdir $srcdir  or die "Could not chdir into $srcdir\n";
     print "Commit & Publish y/N: ";
     print "Exiting...\n" and exit if(<STDIN>!~ /^[Y|y]/);
-    print "Commiting Source to Git\n",;
-    #`git commit -a -m "Automatic site update"`;
+    if(lc($config->param("use_git")) eq 'true'){
+        print "Commiting Source to Git\n",;
+        print `git commit -a -m "Automatic site update on push"`;
+    }
     print "Pushing Site\n";
     print `rsync -avz --progress -e "ssh" $outdir/ $srvurl`;
 }
@@ -80,7 +91,16 @@ sub new{
     }
     open(NEW,"+>","$srcdir/posts/$name.md") or die "Could not create post: $name.md\n";
     close NEW;
-    mkdir "$outdir/media/$name" or die "Could not creat post: $srcdir/media/$name";
+    chdir $srcdir and `git add "$srcdir/posts/$name.md"` if lc($config->param("usegit")) eq 'true'; 
+    mkdir "$outdir/media/posts/$name" or die "Could not creat post: $srcdir/media/posts/$name";
+}
+
+sub view{
+    print "Open Url: http://localhost:8000\n";
+    system("mini_httpd -p 8000 -d $outdir -h localhost 2>&1 > /dev/null &");
+    print "Press [enter] to stop server: ";
+    my $a = <STDIN>;
+    `killall mini_httpd`;
 }
 
 sub help{
@@ -88,6 +108,7 @@ sub help{
     -g: generates site
     -p: pushes site
     -n: new post
+    -v: serves site on port 8080 (with mini_httpd)
     -?: shows this dialog
 HELP
 }
