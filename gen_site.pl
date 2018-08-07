@@ -19,13 +19,12 @@ my $outdir  = "$basedir/out";
 my $incdir  = "$basedir/inc";
 my $srvurl  = $config->param("remote");
 my $prefix  = $config->param("prefix");
-my %tabmap  = (
-                'index.md'    => 'home',
-                'posts/'      => 'posts',
-            );
+my %tabmap  = %{$config->get_block('tabs')};
+
 my $year    = (localtime)[5] + 1900;
-my $regex; #tab regex
-($regex .= "$_|") =~s/\//\\\//g foreach keys %tabmap;
+my $regex   =''; #tab regex
+($regex .= "$_|") foreach keys %tabmap;
+$regex   =~s#\/#\\/#g; 
 chop($regex);
 
 my %subs=(
@@ -57,12 +56,11 @@ sub gen_site{
         $_ =~ /^$srcdir\/($regex).*/g;
         my $tab = 'none';
         $tab  =  $tabmap{$1} if defined $1;
-        #print $tab,"\n";
         $file =~ s/\.md$/.html/g;
         if($_ =~ /\.(md|html)$/){
             print "Processing: $_ -> $file\n";
             #Possible log hash of file skip here unless md file or template changes
-            print `pandoc -s --template=$incdir/template.html $args -T $prefix -V year=$year -V tab=$tab -i $_ -o $file`;
+            print `pandoc -s --template=$incdir/template.html $args -T $prefix -V year=$year -V lang=en -V tab=$tab -i $_ -o $file`;
         }
     }
 }
@@ -71,7 +69,7 @@ sub push{
     chdir $srcdir  or die "Could not chdir into $srcdir\n";
     print "Commit & Publish y/N: ";
     print "Exiting...\n" and exit if(<STDIN>!~ /^[Y|y]/);
-    if(lc($config->param("use_git")) eq 'true'){
+    if($config->param("usegit") =~ /^(True|true)/){
         print "Commiting Source to Git\n",;
         print `git commit -a -m "Automatic site update on push"`;
     }
@@ -91,7 +89,7 @@ sub new{
     }
     open(NEW,"+>","$srcdir/posts/$name.md") or die "Could not create post: $name.md\n";
     close NEW;
-    chdir $srcdir and `git add "$srcdir/posts/$name.md"` if lc($config->param("usegit")) eq 'true'; 
+    chdir $srcdir and `git add "$srcdir/posts/$name.md"` if lc($config->param('usegit')) eq 'true'; 
     mkdir "$outdir/media/posts/$name" or die "Could not creat post: $srcdir/media/posts/$name";
 }
 
