@@ -2,30 +2,27 @@
 use warnings;
 use strict;
 use File::Glob;
-use Config::Simple;
+use Config::Tiny;
+use Browser::Open qw(open_browser);
 # Written by:   (John Leary)[git@jleary.cc]
 # Date Created: 28 Jul 2018
-# Version:      03 Aug 2018
-# Dependencies: pandoc, perl, Config::Simple, and rsync
+# Version:      08 Aug 2018
+# Dependencies: pandoc, perl, Config::Tiny,Browser::Open, and rsync
+# Deb Packages: pandoc, perl, libconfig-tiny-perl,libbrowser-open-perl, rsync
 
-## Config
-### I'm probably going to regret this
-### but I added multi site support.
 my $site    = defined $ARGV[1]? '/'.$ARGV[1] :  '';
-my $config  = new Config::Simple("$ENV{'HOME'}/Site$site/site.cfg") or die "Could not open site.cfg";
+my $cfg     = Config::Tiny->read("$ENV{'HOME'}/Site$site/site.cfg") or die "Could not open site.cfg";
+
+## Constants
 my $basedir = "$ENV{'HOME'}/Site";
 my $srcdir  = "$basedir/src";
 my $outdir  = "$basedir/out";
 my $incdir  = "$basedir/inc";
-my $srvurl  = $config->param("remote");
-my $prefix  = $config->param("prefix");
-my %tabmap  = %{$config->get_block('tabs')};
-
-my $year    = (localtime)[5] + 1900;
-my $regex   =''; #tab regex
-($regex .= "$_|") foreach keys %tabmap;
-$regex   =~s#\/#\\/#g; 
-chop($regex);
+## Settings Defined in cfg
+my $srvurl  = $cfg->{_}->{"remote"} or die "remote not defined in site.cfg";
+my $prefix  = $cfg->{_}->{"prefix"} or die "prefix not defined in site.cfg";
+my $tabmap  = $cfg->{'tabmap'}      or die "[tabmap] not specified in site.cfg";
+my $secure  = $cfg->{'secure'};
 
 my %subs=(
     '-g'=>[\&gen_site,$srcdir],
@@ -41,21 +38,30 @@ $subs{$arg}->[0]($subs{$arg}->[1]);
 ## Functions
 
 sub gen_site{
+    (my $regex, my $year);
+    if($srcdir eq $_[0]){
+        $year    = (localtime)[5] + 1900;
+        $regex   =''; #tab regex
+        ($regex .= "$_|") foreach keys %{$tabmap};
+        $regex   =~s#\/#\\/#g; 
+        chop($regex);
+    }else{
+        (undef,$regex,$year) = @_;
+    }
     return if $_[0] =~ /\.git$/;
     (my $newdir = $_[0]) =~ s/$srcdir/$outdir/g;
     print "Make Dir: $newdir\n";
     mkdir $newdir;
-    my $args = '';
-    if(-e $_[0]."/.login"){
-        $args = '-V login=login';
-        print "Handling Login Directory: $_[0]\n";
-    }
     foreach(<"$_[0]*">){
-        print "Recursing On Directory: $_\n" and &gen_site("$_/") and next if(-d $_);
+        print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year) and next if(-d $_);
         (my $file = $_) =~ s/$srcdir/$outdir/g;
         $_ =~ /^$srcdir\/($regex).*/g;
         my $tab = 'none';
-        $tab  =  $tabmap{$1} if defined $1;
+        my $args = '';
+        if(defined $1){
+            $tab  =  $tabmap->{$1};# if defined $1;
+            $args = '-V login=login' if (defined $secure->{$1} && $secure->{$1} eq 'true');
+        }
         $file =~ s/\.md$/.html/g;
         if($_ =~ /\.(md|html)$/){
             print "Processing: $_ -> $file\n";
@@ -69,7 +75,7 @@ sub push{
     chdir $srcdir  or die "Could not chdir into $srcdir\n";
     print "Commit & Publish y/N: ";
     print "Exiting...\n" and exit if(<STDIN>!~ /^[Y|y]/);
-    if($config->param("usegit") =~ /^(True|true)/){
+    if(defined $cfg->{_}->{"usegit"} && $cfg->{_}->{"usegit"} eq 'true'){
         print "Commiting Source to Git\n",;
         print `git commit -a -m "Automatic site update on push"`;
     }
@@ -89,13 +95,18 @@ sub new{
     }
     open(NEW,"+>","$srcdir/posts/$name.md") or die "Could not create post: $name.md\n";
     close NEW;
-    chdir $srcdir and `git add "$srcdir/posts/$name.md"` if lc($config->param('usegit')) eq 'true'; 
+    if (defined $cfg->{_}->{"usegit"} && lc($cfg->{_}->{"usegit"}) eq 'true'){
+        chdir $srcdir;
+        print `git add "$srcdir/posts/$name.md"` ; 
+    }
     mkdir "$outdir/media/posts/$name" or die "Could not creat post: $srcdir/media/posts/$name";
 }
 
 sub view{
     print "Open Url: http://localhost:8000\n";
     system("mini_httpd -p 8000 -d $outdir -h localhost 2>&1 > /dev/null &");
+#    system("xdg-open http://localhost:8000");
+    open_browser('http://localhost:8000');
     print "Press [enter] to stop server: ";
     my $a = <STDIN>;
     `killall mini_httpd`;
@@ -106,7 +117,7 @@ sub help{
     -g: generates site
     -p: pushes site
     -n: new post
-    -v: serves site on port 8080 (with mini_httpd)
+    -v: serves site on port 8000 (with mini_httpd)
     -?: shows this dialog
 HELP
 }
