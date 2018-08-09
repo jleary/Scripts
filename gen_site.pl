@@ -4,9 +4,9 @@ use strict;
 use File::Glob;
 use Config::Tiny;
 use Browser::Open qw(open_browser);
-# Written by:   (John Leary)[git@jleary.cc]
+# Written by:   [John Leary](git@jleary.cc)
 # Date Created: 28 Jul 2018
-# Version:      08 Aug 2018
+# Version:      09 Aug 2018
 # Dependencies: pandoc, perl, Config::Tiny, Browser::Open, and rsync
 # Deb Packages: pandoc, perl, libconfig-tiny-perl, libbrowser-open-perl, rsync
 # Todo:
@@ -29,6 +29,7 @@ die "remote not defined in site.cfg" if !defined $cfg->{_}->{'remote'};
 die "prefix not defined in site.cfg" if !defined $cfg->{_}->{'prefix'};
 die "tabmap not defined in site.cfg" if !defined $cfg->{'tabmap'};
 
+## Dispatch Table
 my %subs=(
     '-g'=>[\&gen_site,$SRCDIR],
     '-p'=>[\&push    ,undef  ],
@@ -36,12 +37,10 @@ my %subs=(
     '-v'=>[\&view    ,undef  ],
     '-?'=>[\&help    ,undef  ],
 );
-
 my $arg = (defined $ARGV[0] && $subs{$ARGV[0]}) ? $ARGV[0]:'-?'; 
 $subs{$arg}->[0]($subs{$arg}->[1]);
 
 ## Functions
-
 sub gen_site{
     (my $regex, my $year);
     if($SRCDIR eq $_[0]){ #Base condition
@@ -61,16 +60,15 @@ sub gen_site{
         print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year) and next if(-d $_);
         (my $file = $_) =~ s/$SRCDIR/$OUTDIR/g;
         $_ =~ /^$SRCDIR\/($regex).*/g;
-        my $tab = 'none';
-        my $login = '';
+        my $args = '-V tab=none';
         if(defined $1){
-            $tab   =  $cfg->{'tabmap'}->{$1};# if defined $1;
-            $login = '-V login=login' if (defined $cfg->{'secure'}->{$1} && $cfg->{'secure'}->{$1} eq 'true');
+            $args   =  '-V tab=' . $cfg->{'tabmap'}->{$1};
+            $args  .= ' -V login=login' if (defined $cfg->{'secure'}->{$1} && $cfg->{'secure'}->{$1} eq 'true');
         }
         $file =~ s/\.md$/.html/g;
         if($_ =~ /\.(md|html)$/){
             print "Processing: $_ -> $file\n";
-            print `pandoc -s --template=$INCDIR/template.html $login -T "$cfg->{_}->{'prefix'}" -V year=$year -V lang=en -V tab=$tab -i $_ -o $file`;
+            print `pandoc -s --template=$INCDIR/template.html $args -T "$cfg->{_}->{'prefix'}" -V year=$year -V lang=en -i $_ -o $file`;
         }
     }
 }
@@ -128,8 +126,8 @@ sub init{
 ;;login/     = true
 EOF
     close $sc;
-
 }
+
 sub view{
     print "Open Url: http://localhost:8000\n";
     system("mini_httpd -p 8000 -d $OUTDIR -h localhost 2>&1 > /dev/null &");
