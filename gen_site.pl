@@ -6,12 +6,13 @@ use Config::Tiny;
 use Browser::Open qw(open_browser);
 # Written by:   [John Leary](git@jleary.cc)
 # Date Created: 28 Jul 2018
-# Version:      09 Aug 2018
+# Version:      10 Aug 2018
 # Dependencies: pandoc, perl, Config::Tiny, Browser::Open, and rsync
 # Deb Packages: pandoc, perl, libconfig-tiny-perl, libbrowser-open-perl, rsync
 # Todo:
 ##    - make fully platform agnostic (replace mini_httpd,deal w/ paths),
 ##    - replace recursion with loop and stack
+##    - add ignore section to config file
 
 my $site    = defined $ARGV[1]? '/'. $ARGV[1] :  '';
 
@@ -42,33 +43,37 @@ $subs{$arg}->[0]($subs{$arg}->[1]);
 
 ## Functions
 sub gen_site{
+    return if $_[0] =~ /\.git$/;
     (my $regex, my $year);
     if($SRCDIR eq $_[0]){ #Base condition
         $year    = (localtime)[5] + 1900;
-        $regex   =''; #tab regex
+        $regex   = ''; #tab regex
         ($regex .= "$_|") foreach keys %{$cfg->{'tabmap'}};
         $regex   =~s#(\/|\.)#\\$1#g; 
         chop($regex);
     }else{
         (undef,$regex,$year) = @_;
     }
-    return if $_[0] =~ /\.git$/;
+    my $perm_args = "-s --template=$INCDIR/template.html -T '$cfg->{_}->{'prefix'}' -V year=$year -V lang=en";
     (my $newdir = $_[0]) =~ s/$SRCDIR/$OUTDIR/g;
     print "Make Dir: $newdir\n";
     mkdir $newdir;
     foreach(<"$_[0]*">){
+        $_ =~ /^$SRCDIR\/(.+)/g;
+        print "Ignoring: $_\n" and next if (defined $1 and defined $cfg->{'ignore'}->{$1});
         print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year) and next if(-d $_);
         (my $file = $_) =~ s/$SRCDIR/$OUTDIR/g;
         $_ =~ /^$SRCDIR\/($regex).*/g;
         my $args = '-V tab=none';
         if(defined $1){
-            $args   =  '-V tab=' . $cfg->{'tabmap'}->{$1};
+            $args   = ' -V tab=' . $cfg->{'tabmap'}->{$1};
             $args  .= ' -V login=login' if (defined $cfg->{'secure'}->{$1} && $cfg->{'secure'}->{$1} eq 'true');
         }
-        $file =~ s/\.md$/.html/g;
-        if($_ =~ /\.(md|html)$/){
+        $args = "$perm_args $args";
+        $file =~ s/\..*$/.html/g;
+        if($_ =~ /\..*$/){
             print "Processing: $_ -> $file\n";
-            print `pandoc -s --template=$INCDIR/template.html $args -T "$cfg->{_}->{'prefix'}" -V year=$year -V lang=en -i $_ -o $file`;
+            print `pandoc $args  -i $_ -o $file`;
         }
     }
 }
