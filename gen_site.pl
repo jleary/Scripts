@@ -12,7 +12,6 @@ use Browser::Open qw(open_browser);
 # Todo:
 ##    - make fully platform agnostic (replace mini_httpd,deal w/ paths),
 ##    - replace recursion with loop and stack
-##    - add ignore section to config file
 
 my $site    = defined $ARGV[1]? '/'. $ARGV[1] :  '';
 
@@ -118,16 +117,19 @@ sub init{
     print "Write File: template.html\n"    and `pandoc -D html > $INCDIR/template.html`;
     print "Write File: site.cfg\n" and open(my $sc, '>', "$BASEDIR/site.cfg") or die "Could not open site.cfg for writing.";
     print $sc <<EOF;
-;remote   = username\@rsync.example.com
-;prefix   = Title Of Site
-;usegit   = false ; whether or not you want to perform a git commit on the directory
-;[tabmap]
-;;file location mapped to tab name
-;index.md    = home
-;login/      = login
-;[secure]
-;;list of login tab keys
-;;login/     = true
+#remote   = username\@rsync.example.com
+#prefix   = Title Of Site
+#usegit   = false ; whether or not you want to perform a git commit on the directory
+#[tabmap]
+##file location mapped to tab name
+#index.md    = home
+#login/      = login
+#[secure]
+##list of login tab keys
+#login/     = true
+#[ignore]
+##list of files/directories to ignore
+#posts/staging/ = true
 EOF
     close $sc;
 }
