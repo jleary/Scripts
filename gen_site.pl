@@ -59,12 +59,11 @@ sub gen_site{
     print "Make Dir: $newdir\n";
     mkdir $newdir;
     foreach(<"$_[0]*">){
-        $_ =~ /^$SRCDIR\/(.+)/g;
-        print "Ignoring: $_\n" and next if (defined $1 and defined $cfg->{'ignore'}->{$1});
+        print "Ignoring: $_\n" and next if defined $cfg->{'ignore'}->{substr $_, (length $SRCDIR)+1 };
         print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year) and next if(-d $_);
         (my $file = $_) =~ s/$SRCDIR/$OUTDIR/g;
-        $_ =~ /^$SRCDIR\/($regex).*/g;
         my $args = '-V tab=none';
+        $_ =~ /^$SRCDIR\/($regex)/g;
         if(defined $1){
             $args   = ' -V tab=' . $cfg->{'tabmap'}->{$1};
             $args  .= ' -V login=login' if (defined $cfg->{'secure'}->{$1} && $cfg->{'secure'}->{$1} eq 'true');
