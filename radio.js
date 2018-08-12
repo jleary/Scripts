@@ -15,8 +15,8 @@ function init(){
     }
     //Play Link with #ID
     if(window.location.hash){
-        if(document.getElementById('content').querySelectorAll(window.location.hash)[0]){
-            play(document.getElementById('content').querySelectorAll(window.location.hash)[0],null);    
+        if(document.getElementById('content').querySelector(window.location.hash)){
+            play(document.getElementById('content').querySelector(window.location.hash),null);    
         }
     }
 }
