@@ -8,7 +8,7 @@ Todo: Use XHTTP Request to download and parse m3u8 and pls files
 */
 
 function init(){
-    var links = document.getElementById('content').querySelectorAll('a'),i;
+    var links = document.getElementById('content').querySelectorAll('a.stream'),i;
     //Add Event Listener for play function
     for(i = 0; i < links.length; ++i){
         links[i].addEventListener('click',function(event){play(this,event);},false);
