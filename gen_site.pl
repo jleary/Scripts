@@ -25,6 +25,7 @@ my $INCDIR  = "$BASEDIR/inc";
 
 ## Required Settings
 my $cfg     = Config::Tiny->read("$ENV{'HOME'}/Site$site/site.cfg") or die "Could not open site.cfg";
+my $datemap = Config::Tiny->read("$ENV{'HOME'}/Site$site/date.map") or die "Could not open date.map";
 die "remote not defined in site.cfg" if !defined $cfg->{_}->{'remote'};
 die "prefix not defined in site.cfg" if !defined $cfg->{_}->{'prefix'};
 die "tabmap not defined in site.cfg" if !defined $cfg->{'tabmap'};
@@ -43,23 +44,31 @@ $subs{$arg}->[0]($subs{$arg}->[1]);
 ## Functions
 sub gen_site{
     return if $_[0] =~ /\.git$/;
-    (my $regex, my $year);
+    (my $regex, my $year,my $force=0);
     if($SRCDIR eq $_[0]){ #Base condition
         $year    = (localtime)[5] + 1900;
         $regex   = ''; #tab regex
         ($regex .= "$_|") foreach keys %{$cfg->{'tabmap'}};
         $regex   =~s#(\/|\.)#\\$1#g; 
         chop($regex);
+        if (!defined $datemap->{'reqmap'}->{"$INCDIR/template.html"}
+            ||(stat "$INCDIR/template.html")[9] != $datemap->{'reqmap'}->{"$INCDIR/template.html"}){
+            $force = 1; 
+            $datemap->{'reqmap'}->{"$INCDIR/template.html"}=(stat "$INCDIR/template.html")[9];
+        }elsif(!defined $datemap->{'reqmap'}->{'year'} || $year != $datemap->{'reqmap'}->{'year'}){
+            $datemap->{'reqmap'}->{'year'}=$year;
+            $force = 1;
+        }
     }else{
-        (undef,$regex,$year) = @_;
+        (undef,$regex,$year,$force) = @_;
     }
     my $perm_args = "-s --template=$INCDIR/template.html -T '$cfg->{_}->{'prefix'}' -V year=$year -V lang=en";
     (my $newdir = $_[0]) =~ s/$SRCDIR/$OUTDIR/g;
     print "Make Dir: $newdir\n";
     mkdir $newdir;
     foreach(<"$_[0]*">){
-        print "Ignoring: $_\n" and next if defined $cfg->{'ignore'}->{substr $_, (length $SRCDIR)+1 };
-        print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year) and next if(-d $_);
+        print "Ignoring: $_\n" and next if ($_ ne $SRCDIR && defined $cfg->{'ignore'}->{substr($_,(length $SRCDIR)+1)});
+        print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year,$force) and next if(-d $_);
         (my $file = $_) =~ s/$SRCDIR/$OUTDIR/g;
         my $args = '-V tab=none';
         $_ =~ /^$SRCDIR\/($regex)/g;
@@ -69,11 +78,13 @@ sub gen_site{
         }
         $args = "$perm_args $args";
         $file =~ s/\..*$/.html/g;
-        if($_ =~ /\..*$/){
+        if($_ =~ /\..*$/ && ($force==1||!defined $datemap->{'filemap'}->{$_}||(stat $_)[9]!=$datemap->{'filemap'}->{$_})){
             print "Processing: $_ -> $file\n";
             print `pandoc $args  -i $_ -o $file`;
+            $datemap->{'filemap'}->{$_}=(stat $_)[9];
         }
     }
+    $datemap->write("$ENV{'HOME'}/Site$site/date.map");
 }
 
 sub push{
