@@ -126,6 +126,8 @@ sub init{
     print "Make Dir: output directory\n"   and mkdir $OUTDIR          or die "Could not create output directory";
     print "Make Dir: includes directory\n" and mkdir $INCDIR          or die "Could not create includes directory";
     print "Write File: template.html\n"    and `pandoc -D html > $INCDIR/template.html`;
+    print "Write File: date.map\n" and open(my $dm, '>', "$BASEDIR/date.map") or die "Could not open date.map for writing.";
+    close $dm;
     print "Write File: site.cfg\n" and open(my $sc, '>', "$BASEDIR/site.cfg") or die "Could not open site.cfg for writing.";
     print $sc <<EOF;
 #remote   = username\@rsync.example.com
