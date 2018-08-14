@@ -31,14 +31,14 @@ die "tabmap not defined in site.cfg" if !defined $cfg->{'tabmap'};
 
 ## Dispatch Table
 my %subs=(
-    '-g'=>[\&gen_site,$SRCDIR],
-    '-p'=>[\&push    ,undef  ],
-    '-n'=>[\&new     ,undef  ],
-    '-v'=>[\&view    ,undef  ],
-    '-?'=>[\&help    ,undef  ],
+    '-g'=> \&gen_site,
+    '-p'=> \&push    ,
+    '-n'=> \&new     ,
+    '-v'=> \&view    ,
+    '-?'=> \&help    ,
 );
 my $arg = (defined $ARGV[0] && $subs{$ARGV[0]}) ? $ARGV[0]:'-?'; 
-$subs{$arg}->[0]($subs{$arg}->[1]);
+$subs{$arg}->();
 
 ## Functions
 sub gen_site{
@@ -57,7 +57,7 @@ sub gen_site{
         $force = 1;
     }
     my $perm_args = "-s --template=$INCDIR/template.html -T '$cfg->{_}->{'prefix'}' -V year=$year -V lang=en";
-    my @stack = <"$_[0]*">;
+    my @stack = <"$SRCDIR/*">;
     while($_=shift(@stack)){
         print "Ignoring: $_\n" and next if ($_ ne $SRCDIR && defined $cfg->{'ignore'}->{substr($_,(length $SRCDIR)+1)});
         if(-d $_){
@@ -65,15 +65,13 @@ sub gen_site{
             unshift @stack, <"$_/*">;
             (my $newdir = $_) =~ s/$SRCDIR/$OUTDIR/g;
             print "Make Dir: $newdir\n" and mkdir $newdir if(! -e $newdir);
-                
-            
             next;
         }
         if($_ =~ /\..*$/ && ($force==1||!defined $datemap->{'filemap'}->{$_}||(stat $_)[9]!=$datemap->{'filemap'}->{$_})){
             (my $file = $_) =~ s/$SRCDIR/$OUTDIR/g;
             my $args = '-V tab=none';
             if($regex ne ''){
-            $_ =~ /^$SRCDIR\/($regex)/g;
+                $_ =~ /^$SRCDIR\/($regex)/g;
                 if(defined $1){
                     $args   = ' -V tab=' . $cfg->{'tabmap'}->{$1};
                     $args  .= ' -V login=login' if (defined $cfg->{'secure'}->{$1} && $cfg->{'secure'}->{$1} eq 'true');
