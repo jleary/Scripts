@@ -64,8 +64,10 @@ sub gen_site{
     }
     my $perm_args = "-s --template=$INCDIR/template.html -T '$cfg->{_}->{'prefix'}' -V year=$year -V lang=en";
     (my $newdir = $_[0]) =~ s/$SRCDIR/$OUTDIR/g;
-    print "Make Dir: $newdir\n";
-    mkdir $newdir;
+    if(! -e $newdir){
+        print "Make Dir: $newdir\n";
+        mkdir $newdir;
+    }
     foreach(<"$_[0]*">){
         print "Ignoring: $_\n" and next if ($_ ne $SRCDIR && defined $cfg->{'ignore'}->{substr($_,(length $SRCDIR)+1)});
         print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year,$force) and next if(-d $_);
