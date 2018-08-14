@@ -19,7 +19,18 @@ function init(){
             play(document.getElementById('content').querySelector(window.location.hash),null);    
         }
     }
+    //EndsWith Polyfill
+    if(!String.prototype.endsWith){
+        String.prototype.endsWith = function(endswith){
+            if(this.indexOf(endswith)==(endswith.length - this.length)){
+                return 1;
+            }else{
+                return 0;
+            }
+        }
+    }
 }
+
 function play(link,event){
     if(event){
         event.preventDefault();
