@@ -11,7 +11,6 @@ use Browser::Open qw(open_browser);
 # Deb Packages: pandoc, perl, libconfig-tiny-perl, libbrowser-open-perl, rsync
 # Todo:
 ##    - make fully platform agnostic (replace mini_httpd,deal w/ paths),
-##    - replace recursion with loop and stack
 
 my $site    = defined $ARGV[1]? '/'. $ARGV[1] :  '';
 
@@ -44,23 +43,19 @@ $subs{$arg}->[0]($subs{$arg}->[1]);
 ## Functions
 sub gen_site{
     return if $_[0] =~ /\.git$/;
-    (my $regex, my $year,my $force=0);
-    if($SRCDIR eq $_[0]){ #Base condition
-        $year    = (localtime)[5] + 1900;
-        $regex   = ''; #tab regex
-        ($regex .= "$_|") foreach keys %{$cfg->{'tabmap'}};
-        $regex   =~s#(\/|\.)#\\$1#g; 
-        chop($regex);
-        if (!defined $datemap->{'reqmap'}->{"$INCDIR/template.html"}
-            ||(stat "$INCDIR/template.html")[9] != $datemap->{'reqmap'}->{"$INCDIR/template.html"}){
-            $force = 1; 
-            $datemap->{'reqmap'}->{"$INCDIR/template.html"}=(stat "$INCDIR/template.html")[9];
-        }elsif(!defined $datemap->{'reqmap'}->{'year'} || $year != $datemap->{'reqmap'}->{'year'}){
-            $datemap->{'reqmap'}->{'year'}=$year;
-            $force = 1;
-        }
-    }else{
-        (undef,$regex,$year,$force) = @_;
+    my $force   =0;
+    my $year    = (localtime)[5] + 1900;
+    my $regex   = ''; #tab regex
+    ($regex .= "$_|") foreach keys %{$cfg->{'tabmap'}};
+    $regex   =~s#(\/|\.)#\\$1#g; 
+    chop($regex);
+    if (!defined $datemap->{'reqmap'}->{"$INCDIR/template.html"}
+        ||(stat "$INCDIR/template.html")[9] != $datemap->{'reqmap'}->{"$INCDIR/template.html"}){
+        $force = 1; 
+        $datemap->{'reqmap'}->{"$INCDIR/template.html"}=(stat "$INCDIR/template.html")[9];
+    }elsif(!defined $datemap->{'reqmap'}->{'year'} || $year != $datemap->{'reqmap'}->{'year'}){
+        $datemap->{'reqmap'}->{'year'}=$year;
+        $force = 1;
     }
     my $perm_args = "-s --template=$INCDIR/template.html -T '$cfg->{_}->{'prefix'}' -V year=$year -V lang=en";
     (my $newdir = $_[0]) =~ s/$SRCDIR/$OUTDIR/g;
@@ -68,19 +63,20 @@ sub gen_site{
         print "Make Dir: $newdir\n";
         mkdir $newdir;
     }
-    foreach(<"$_[0]*">){
+    my @stack = <"$_[0]*">;
+    while($_=shift(@stack)){
         print "Ignoring: $_\n" and next if ($_ ne $SRCDIR && defined $cfg->{'ignore'}->{substr($_,(length $SRCDIR)+1)});
-        print "Recursing On Directory: $_\n" and &gen_site("$_/",$regex,$year,$force) and next if(-d $_);
-        (my $file = $_) =~ s/$SRCDIR/$OUTDIR/g;
-        my $args = '-V tab=none';
-        $_ =~ /^$SRCDIR\/($regex)/g;
-        if(defined $1){
-            $args   = ' -V tab=' . $cfg->{'tabmap'}->{$1};
-            $args  .= ' -V login=login' if (defined $cfg->{'secure'}->{$1} && $cfg->{'secure'}->{$1} eq 'true');
-        }
-        $args = "$perm_args $args";
-        $file =~ s/\..*$/.html/g;
+        print "Directory: $_\n" and unshift @stack, <"$_/*"> and next if(-d $_);
         if($_ =~ /\..*$/ && ($force==1||!defined $datemap->{'filemap'}->{$_}||(stat $_)[9]!=$datemap->{'filemap'}->{$_})){
+            (my $file = $_) =~ s/$SRCDIR/$OUTDIR/g;
+            my $args = '-V tab=none';
+            $_ =~ /^$SRCDIR\/($regex)/g;
+            if(defined $1){
+                $args   = ' -V tab=' . $cfg->{'tabmap'}->{$1};
+                $args  .= ' -V login=login' if (defined $cfg->{'secure'}->{$1} && $cfg->{'secure'}->{$1} eq 'true');
+            }
+            $args = "$perm_args $args";
+            $file =~ s/\..*$/.html/g;
             print "Processing: $_ -> $file\n";
             print `pandoc $args  -i $_ -o $file`;
             $datemap->{'filemap'}->{$_}=(stat $_)[9];
