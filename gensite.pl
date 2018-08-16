@@ -20,7 +20,7 @@ my $SRCDIR  = "$BASEDIR/src";
 my $OUTDIR  = "$BASEDIR/out";
 my $INCDIR  = "$BASEDIR/inc";
 
-&init() and exit if $ARGV[0] eq '-i'; 
+&init() and exit if(defined $ARGV[0] && $ARGV[0] eq '-i'); 
 
 ## Required Settings
 my $cfg     = Config::Tiny->read("$ENV{'HOME'}/Site$site/site.cfg") or die "Could not open site.cfg";
