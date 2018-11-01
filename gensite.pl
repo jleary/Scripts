@@ -6,7 +6,6 @@ use Config::Tiny;
 use Browser::Open qw(open_browser);
 # Written by:   [John Leary](git@jleary.cc)
 # Date Created: 28 Jul 2018
-# Version:      10 Aug 2018
 # Dependencies: pandoc, perl, Config::Tiny, Browser::Open, and rsync
 # Deb Packages: pandoc, perl, libconfig-tiny-perl, libbrowser-open-perl, rsync
 # Todo:
