@@ -11,10 +11,8 @@ use Browser::Open qw(open_browser);
 # Todo:
 ##    - make fully platform agnostic (replace mini_httpd,deal w/ paths),
 
-my $site    = defined $ARGV[1]? '/'. $ARGV[1] :  '';
-
-## Constants
-my $BASEDIR = "$ENV{'HOME'}/Site$site";
+## "Constants"
+my $BASEDIR = "$ENV{'HOME'}/Site";
 my $SRCDIR  = "$BASEDIR/src";
 my $OUTDIR  = "$BASEDIR/out";
 my $INCDIR  = "$BASEDIR/inc";
@@ -22,25 +20,25 @@ my $INCDIR  = "$BASEDIR/inc";
 &init() and exit if(defined $ARGV[0] && $ARGV[0] eq '-i'); 
 
 ## Required Settings
-my $cfg     = Config::Tiny->read("$ENV{'HOME'}/Site$site/site.cfg") or die "Could not open site.cfg";
-my $datemap = Config::Tiny->read("$ENV{'HOME'}/Site$site/date.map") or die "Could not open date.map";
+my $cfg     = Config::Tiny->read("$ENV{'HOME'}/Site/site.cfg") or die "Could not open site.cfg";
+my $datemap = Config::Tiny->read("$ENV{'HOME'}/Site/date.map") or die "Could not open date.map";
 die "remote not defined in site.cfg" if !defined $cfg->{_}->{'remote'};
 die "prefix not defined in site.cfg" if !defined $cfg->{_}->{'prefix'};
 die "tabmap not defined in site.cfg" if !defined $cfg->{'tabmap'};
 
 ## Dispatch Table
 my %subs=(
-    '-g'=> \&gen_site,
-    '-p'=> \&push    ,
-    '-n'=> \&new     ,
-    '-v'=> \&view    ,
-    '-?'=> \&help    ,
+    '-g'=> \&gen    ,
+    '-p'=> \&put    ,
+    '-n'=> \&new    ,
+    '-v'=> \&view   ,
+    '-?'=> \&help   ,
 );
 my $arg = (defined $ARGV[0] && $subs{$ARGV[0]}) ? $ARGV[0]:'-?'; 
 $subs{$arg}->();
 
 ## Functions
-sub gen_site{
+sub gen{
     my $force   = 0;
     my $year    = (localtime)[5] + 1900;
     my $regex   = ''; #tab regex
@@ -83,10 +81,11 @@ sub gen_site{
             $datemap->{'filemap'}->{$_}=(stat $_)[9];
         }
     }
-    $datemap->write("$ENV{'HOME'}/Site$site/date.map");
+    $datemap->write("$ENV{'HOME'}/Site/date.map");
 }
 
-sub push{
+
+sub put{
     chdir $SRCDIR  or die "Could not chdir into $SRCDIR\n";
     print "Commit & Publish y/N: ";
     print "Exiting...\n" and exit if(<STDIN>!~ /^[Y|y]/);
