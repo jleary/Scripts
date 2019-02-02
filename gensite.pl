@@ -94,7 +94,7 @@ sub put{
         print `git commit -a -m "Automatic site update on push"`;
     }
     print "Pushing Site\n";
-    print `rsync -avz --progress -e "ssh" $OUTDIR/ $cfg->{_}->{"remote"}`;
+    print `rsync -avz -e "ssh" $OUTDIR/ $cfg->{_}->{"remote"}`;
 }
 
 sub new{
