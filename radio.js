@@ -2,7 +2,7 @@
 Name:         radio.js
 Written By:   [John Leary](git@jleary.cc)
 Date Created: Aug 11, 2018
-Version:      Aug 12, 2018
+Version:      Feb 09, 2019
 Purpose:      Sets audio tag source to the url of a pressed link
 Todo: Use XHTTP Request to download and parse m3u8 and pls files
 */
@@ -38,13 +38,19 @@ function play(link,event){
     if(link.href.endsWith('.m3u8') == false && link.href.endsWith('.pls') == false){
         var r = document.getElementById('radio_player');
         var t = document.getElementById('radio_ticker');
+        var content_type = '';
         r.pause();
-        r.innerHTML="<source src='"+link.href+"'></source>";
+        if(link.getAttribute('data-type')){
+            content_type = "content-type='"+link.getAttribute('data-type')+"'";
+        }
+        r.innerHTML="<source src='"+link.href+"' "+content_type+" crossorigin='anonymous'></source>";
         t.innerHTML="Now Playing: "
         if(link.getAttribute('data-title')){
-            t.innerHTML += link.getAttribute('data-title');
+            t.innerHTML   += link.getAttribute('data-title');
+            document.title = 'JLeary: ' + link.getAttribute('data-title');
         }else{
-            t.innerHTML += link.innerHTML;
+            t.innerHTML   += link.innerHTML;
+            document.title = 'JLeary: ' + link.innerHTML;
         }
         r.setAttribute('controls','');
         r.load();
@@ -54,5 +60,5 @@ function play(link,event){
         window.location.href=link.href;
     }
 }
-window.onload=init;
-
+//window.onload=init;
+window.addEventListener("load",init);
