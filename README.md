@@ -8,3 +8,4 @@ A collection of useful scripts that I have written.
 + [Radio.js](radio.js): Adds an event listener to a NodeList of links.  When one of the links is clicked, it sets an audio tag's source to the url in the link.
 + [Phone SD Card Sync Script](sync_phone.sh): Runs `tunes_pls` to `/tmp/` and then rsyncs to my sd card.
 + [itunes_launcher.pl](itunes_launcher.pl): iTunes Launcher mentioned in my blog post on [iTunes](https://www.jleary.cc/posts/itunes.html).
++ [zoom_updater.pl](zoom_updater.pl): Updates a dpkg Zoom install on Debian 8.0+
