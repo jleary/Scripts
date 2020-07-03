@@ -3,6 +3,11 @@ use warnings;
 use strict;
 use Config::Tiny;
 
+# Written by:   [John Leary](git@jleary.cc)
+# Date Created: 02 Jul 2020
+# Dependencies: perl, Config::Tiny
+# Deb Packages: perl, libconfig-tiny-perl
+
 #Takes an file called ~/zoom_updater.cfg
 #with the contents: md5=something
 #Updates zoom if the above md5 hash does not match the hash of the downlaoded deb file
