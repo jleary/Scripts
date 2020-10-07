@@ -6,7 +6,7 @@ use Config::Tiny;
 # Written by:   [John Leary](git@jleary.cc)
 # Date Created: 02 Jul 2020
 # Dependencies: perl, Config::Tiny
-# Deb Packages: perl, libconfig-tiny-perl
+# Deb Packages: perl, libconfig-tiny-perl, clamav
 
 #Takes an file called ~/zoom_updater.cfg
 #with the contents: md5=something
@@ -23,6 +23,8 @@ my $md5_current = ($cfg->{_}->{md5} or '');
 
 #Download the latest dpkg for Zoom and get its md5 hash.
 print `wget https://zoom.us/client/latest/zoom_amd64.deb -O /tmp/zoom_amd64.deb`;
+print `clamscan --remove /tmp/zoom_amd64.deb`;
+print "\n";
 my $md5_new = `md5sum /tmp/zoom_amd64.deb`; 
 $md5_new = (split /\s/, $md5_new)[0];
 
