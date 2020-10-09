@@ -23,7 +23,6 @@ my $md5_current = ($cfg->{_}->{md5} or '');
 
 #Download the latest dpkg for Zoom and get its md5 hash.
 print `wget https://zoom.us/client/latest/zoom_amd64.deb -O /tmp/zoom_amd64.deb`;
-print `clamscan --remove /tmp/zoom_amd64.deb` if -e '/tmp/zoom_amd64.deb';
 print "\n";
 if(-e '/tmp/zoom_amd64.deb'){
     my $md5_new = `md5sum /tmp/zoom_amd64.deb`; 
@@ -31,10 +30,15 @@ if(-e '/tmp/zoom_amd64.deb'){
 
     #Upgrade Zoom if the hashes don't match.
     if($md5_current ne $md5_new){
-        print "Updating Zoom\n";
-        print `sudo dpkg -i /tmp/zoom_amd64.deb`;
-        $cfg->{_}->{md5}=$md5_new;
-        $cfg->write($ENV{HOME}.'/.zoom_updater.cfg');
+        print `clamscan --remove /tmp/zoom_amd64.deb`; 
+        if(-e '/tmp/zoom_amd64.deb'){
+            print "Updating Zoom\n";
+            print `sudo dpkg -i /tmp/zoom_amd64.deb`;
+            $cfg->{_}->{md5}=$md5_new;
+            $cfg->write($ENV{HOME}.'/.zoom_updater.cfg');
+        }else{
+            print "ClamAV removed the deb package.\n";
+        }
     }else{
         print "No Zoom Updates Availible\n";
     }
