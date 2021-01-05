@@ -21,7 +21,6 @@ my $INCDIR  = "$BASEDIR/inc";
 
 ## Required Settings
 my $cfg     = Config::Tiny->read("$ENV{'HOME'}/Site/site.cfg") or die "Could not open site.cfg";
-my $datemap = Config::Tiny->read("$ENV{'HOME'}/Site/date.map") or die "Could not open date.map";
 die "remote not defined in site.cfg" if !defined $cfg->{_}->{'remote'};
 die "prefix not defined in site.cfg" if !defined $cfg->{_}->{'prefix'};
 die "tabmap not defined in site.cfg" if !defined $cfg->{'tabmap'};
@@ -39,6 +38,7 @@ $subs{$arg}->();
 
 ## Functions
 sub gen{
+    my $datemap = Config::Tiny->read("$ENV{'HOME'}/Site/date.map") or die "Could not open date.map";
     my $force   = 0;
     my $year    = (localtime)[5] + 1900;
     my $regex   = ''; #tab regex
